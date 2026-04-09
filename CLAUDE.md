@@ -1,4 +1,4 @@
-# CLAUDE.md
+# Agent instructions
 
 ## Project Overview
 
@@ -27,7 +27,10 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 - **No DAGs in this repo**: Workflow orchestration lives in the separate Airflow radar production repository
 - **Robustness**: Handle missing/corrupted input files and edge cases gracefully, log processing steps
 
-## Style
+## Conventions
+- **Python ≥ 3.12** — use modern syntax freely (e.g. `match`, `type` aliases, `X | Y` unions)
+
+### Style
 - Follow Black formatting
 - Naming, comments, etc. in English
 - Mention corresponding legacy names for key variables in comments/docstrings if helpful
@@ -36,15 +39,14 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 - Type hinting for all functions
 - Succinct, to the point documentation
 - Avoid repeating bad practices from legacy code
-- Use Python >= 3.12
 
-### Data flow (legacy)
+## Data flow (legacy)
 1. Input: IRIS radar composites — 45 dBZ and 50 dBZ TOPS products in cartesian IRIS format
 2. Model data: 0°C and −20°C isotherm heights from text files
 3. Processing: C programs combine radar and model data to compute POH and LHI fields
 4. Output: POH/LHI fields in IRIS format and GIF visualizations
 
-### Key domain concepts
+## Key domain concepts
 - **POH**: Probability Of Hail — primary output product
 - **LHI**: Large Hail Index — secondary output product
 - **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
