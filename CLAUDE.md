@@ -6,7 +6,7 @@
 
 **Core values**: Modern tools and standards, code readability and maintainability, reuse over reimplementation. Where applicable, leverage `scipy`, `xarray`, `wradlib`, and other established libraries for mathematical and radar-specific operations instead of reimplementing algorithms. **Do it the pythonic way.** This is not strictly a rewrite project, but rather a replacement with comparable functionality and results.
 
-## Architecture
+## Legacy architecture
 
 The legacy implementation (in `legacy/`) consists of:
 - **C programs**: Core processing logic (POH extraction, LHI/RAE mapping, coordinate generation)
@@ -61,6 +61,6 @@ tests/           # pytest tests
 
 ## Development Context
 
-- The Python rewrite is the active development target — no Python code exists yet
+- The Python rewrite is the active development target
 - The legacy code in `legacy/` serves as reference for understanding the algorithms
 - The legacy C code depends on external headers (`sigtypes.h`, `product.h`, etc.) from the IRIS/FMI software environment — these are not in the repo and the legacy code is not expected to compile standalone
