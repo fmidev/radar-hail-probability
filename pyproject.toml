@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "radar-hail-probability"
 version = "0.1.0"
 description = "Hail probability fields (POH/LHI) from IRIS radar composites and NWP data"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "numpy>=1.26",
     "xarray>=2024.1",
@@ -27,7 +27,7 @@ dev = [
 packages = ["src/hailathon"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 
 [[tool.mypy.overrides]]
 # Scientific packages that don't ship type stubs

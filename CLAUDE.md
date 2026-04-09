@@ -27,7 +27,7 @@ This package is deployed as a containerized service in FMI's Airflow 2.11 radar 
 - **No DAGs in this repo**: Workflow orchestration lives in the separate Airflow radar production repository
 - **Robustness**: Handle missing/corrupted input files and edge cases gracefully, log processing steps
 
-### Style
+## Style
 - Follow Black formatting
 - Naming, comments, etc. in English
 - Mention corresponding legacy names for key variables in comments/docstrings if helpful
@@ -36,6 +36,7 @@ This package is deployed as a containerized service in FMI's Airflow 2.11 radar 
 - Type hinting for all functions
 - Succinct, to the point documentation
 - Avoid repeating bad practices from legacy code
+- Use Python >= 3.12
 
 ### Data flow (legacy)
 1. Input: IRIS radar composites — 45 dBZ and 50 dBZ TOPS products in cartesian IRIS format

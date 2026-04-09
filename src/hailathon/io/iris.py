@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 import xarray as xr
-import wradlib.io as wrio
+from wradlib.io.iris import IrisCartesianProductFile
 
-from hailathon.projection.grid import CRS, grid_coords
+from hailathon.projection.grid import CRS
 
 # Special sentinel values in the FMI IRIS TOPS encoding (raw uint8)
 _NO_ECHO = 0
@@ -15,7 +15,9 @@ _UNDEFINED = 255
 
 # Height encoding shared by IRIS TOPS and NWP PGM files:
 #   raw = height_m / 100 + 1  →  height_m = (raw - 1) * 100
-# This gives 100 m resolution, raw range 1–253 → 0–25200 m.
+# Gives 100 m resolution; raw range 1–253 maps to 0–25200 m.
+# Confirmed by wradlib data_type fkw: {scale: 10.0, offset: -1.0}
+# applied as (raw + offset) / scale = (raw - 1) / 10 km = (raw - 1) * 100 m.
 _HEIGHT_SCALE_M = 100
 _HEIGHT_OFFSET = 1
 
@@ -26,40 +28,27 @@ def read_tops(path: str) -> xr.DataArray:
     Decodes the FMI height encoding: ``height_m = (raw - 1) * 100``.
     Special values (0 = no echo, 254 = special, 255 = undefined) become NaN.
 
-    The encoding is identical to the NWP PGM level files so that raw
-    byte differences can be compared directly in the algorithm layer
-    (``dH = raw_tops - raw_zero``).  Heights are decoded here to metres
-    so callers work with physical units; the algorithm layer re-scales
-    to km when applying the POH/LHI formulas.
+    Grid coordinates are expressed in metres relative to the domain centre,
+    consistent with the FIN1000 stereographic projection.  Absolute
+    geo-referencing against the projection origin is done in the projection
+    layer, not here.
 
     Args:
         path: Path to the IRIS binary file.
 
     Returns:
         2-D DataArray (dims ``y``, ``x``) with echo-top heights in metres
-        and NaN where masked.  Coordinates ``x`` and ``y`` are in
-        FIN1000 projection metres; ``crs_wkt`` is stored as a scalar
-        coordinate attribute.
-
-    Notes:
-        wradlib's ``read_iris`` targets polar IRIS products; for FMI
-        cartesian composites the return structure may differ.  ``rawdata=True``
-        is used throughout so we always work from the unmodified bytes.
-        Grid dimensions are read from the product header fields
-        ``ixsize`` / ``iysize``.  Verify against a real file if the
-        shape looks wrong.
+        and NaN where masked.  Scalar attribute ``crs_wkt`` carries the CRS.
     """
-    iris = wrio.read_iris(path, rawdata=True)
+    f = IrisCartesianProductFile(str(path), loaddata=True, rawdata=True)
+    pc = f.product_hdr["product_configuration"]
 
-    hdr = iris["product_hdr"]["pcf"]
-    xdim = int(hdr["ixsize"])
-    ydim = int(hdr["iysize"])
+    xdim = int(pc["x_size"])
+    ydim = int(pc["y_size"])
 
-    raw = _extract_raw_data(iris, ydim, xdim)
-
+    raw = _extract_raw_data(f, ydim, xdim)
     heights = _decode_heights(raw)
-
-    x, y = grid_coords((ydim, xdim))
+    x, y = _pixel_coords(pc, xdim, ydim)
 
     return xr.DataArray(
         heights,
@@ -74,37 +63,23 @@ def read_tops(path: str) -> xr.DataArray:
     )
 
 
-def _extract_raw_data(iris: dict, ydim: int, xdim: int) -> np.ndarray:
-    """Pull the flat raw byte array from the wradlib result dict and reshape.
+def _extract_raw_data(
+    f: IrisCartesianProductFile, ydim: int, xdim: int
+) -> np.ndarray:
+    """Extract the raw uint8 array from an open IrisCartesianProductFile.
 
-    wradlib's return structure for cartesian IRIS products may place the
-    raw payload under different keys depending on version and product type.
-    We try the most common locations in order.
+    ``f.data`` is an OrderedDict keyed by sweep index; index 0 holds the
+    single image layer with shape ``(1, ydim, xdim)``.
     """
-    # Attempt 1: top-level "data" key (raw bytes for some product types)
-    raw_bytes = iris.get("data")
-
-    # Attempt 2: first sweep data (polar-style return)
-    if raw_bytes is None:
-        sweep = iris.get("sweep", {})
-        if sweep:
-            first = next(iter(sweep.values()))
-            raw_bytes = first.get("sweep_data")
-
-    if raw_bytes is None:
+    raw = f.data[0]
+    if raw.ndim == 3:
+        raw = raw[0]  # drop the leading sweep dimension
+    if raw.shape != (ydim, xdim):
         raise ValueError(
-            "Could not locate raw data in wradlib IRIS result. "
-            "Keys present: " + str(list(iris.keys()))
+            f"Raw data shape {raw.shape} does not match header "
+            f"dimensions {ydim}×{xdim}."
         )
-
-    arr = np.frombuffer(raw_bytes, dtype=np.uint8)
-    expected = ydim * xdim
-    if arr.size != expected:
-        raise ValueError(
-            f"Raw data size {arr.size} does not match header dimensions "
-            f"{ydim}×{xdim} = {expected}."
-        )
-    return arr.reshape(ydim, xdim)
+    return raw
 
 
 def _decode_heights(raw: np.ndarray) -> np.ndarray:
@@ -113,3 +88,21 @@ def _decode_heights(raw: np.ndarray) -> np.ndarray:
     heights = (raw.astype(np.float32) - _HEIGHT_OFFSET) * _HEIGHT_SCALE_M
     heights[mask] = np.nan
     return heights
+
+
+def _pixel_coords(
+    pc: dict, xdim: int, ydim: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute pixel centre coordinates in metres relative to the domain centre.
+
+    IRIS stores ``x_location`` and ``y_location`` as the centre pixel index
+    multiplied by 1000, and ``x_scale`` / ``y_scale`` as pixel size in cm.
+    """
+    dx = pc["x_scale"] / 100.0  # cm → m
+    dy = pc["y_scale"] / 100.0
+    cx = pc["x_location"] / 1000.0  # fractional centre pixel index
+    cy = pc["y_location"] / 1000.0
+
+    x = (np.arange(xdim) - cx) * dx
+    y = (np.arange(ydim) - cy) * dy
+    return x, y
