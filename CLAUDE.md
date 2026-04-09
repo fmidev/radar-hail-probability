@@ -20,10 +20,10 @@ No `setup.py` or `requirements.txt` — all metadata lives in `pyproject.toml`.
 
 ## Airflow Integration
 
-This package is deployed as a containerized service in FMI's Airflow 2.11 radar production system. The integration pattern:
+This package is deployed as a containerized service in FMI's Airflow v2.11 radar production system. The integration pattern:
 
-- **Deployment**: Docker container with this package installed (built via [Containerfile](Containerfile), image `quay.io/fmi/radar-hail-probability:vx.y.z`).
-- **Airflow tasks**: Use `@task.docker` decorator to invoke Python API. Prefer taskflow.
+- **Deployment**: Docker container with this package installed (built via `Containerfile`, image `quay.io/fmi/radar-hail-probability:vx.y.z`).
+- **Airflow tasks**: `@task.docker` decorator is used to invoke Python API.
 - **No DAGs in this repo**: Workflow orchestration lives in the separate Airflow radar production repository
 - **Robustness**: Handle missing/corrupted input files and edge cases gracefully, log processing steps
 
