@@ -53,6 +53,7 @@ This package is deployed as a containerized service in FMI's Airflow 2.11 radar 
 
 ```
 legacy/          # Original production C code and tcsh scripts (reference only)
+legacy/data/     # example data files
 src/             # python code
 tests/           # pytest tests
 ```

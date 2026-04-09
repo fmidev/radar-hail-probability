@@ -25,3 +25,11 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hailathon"]
+
+[tool.mypy]
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+# Scientific packages that don't ship type stubs
+module = ["xarray", "xarray.*", "wradlib", "wradlib.*", "scipy", "scipy.*", "rasterio", "rasterio.*", "h5py", "h5py.*"]
+ignore_missing_imports = true

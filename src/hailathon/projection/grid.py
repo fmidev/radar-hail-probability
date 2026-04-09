@@ -36,7 +36,7 @@ def grid_coords(shape: tuple[int, int] = FULL_SHAPE) -> tuple[np.ndarray, np.nda
     return x, y
 
 
-def grid_latlon(shape: tuple[int, int] = FULL_SHAPE) -> tuple[np.ndarray, np.ndarray]:
+def grid_lonlat(shape: tuple[int, int] = FULL_SHAPE) -> tuple[np.ndarray, np.ndarray]:
     """Return (lon, lat) 2-D arrays for the given grid shape.
 
     Args:
@@ -48,5 +48,4 @@ def grid_latlon(shape: tuple[int, int] = FULL_SHAPE) -> tuple[np.ndarray, np.nda
     x, y = grid_coords(shape)
     xx, yy = np.meshgrid(x, y)
     transformer = pyproj.Transformer.from_crs(CRS, pyproj.CRS.from_epsg(4326), always_xy=True)
-    lon, lat = transformer.transform(xx, yy)
-    return lon, lat
+    return transformer.transform(xx, yy)

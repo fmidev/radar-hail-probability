@@ -7,7 +7,10 @@ def compute_lhi(tops: xr.DataArray, m20_level: xr.DataArray) -> xr.DataArray:
     """Compute Large Hail Index from echo-top heights and −20°C isotherm.
 
     Formula: LHI = 100 + dH
-    where dH = (tops_height − m20_level_height) / 100  [units: hundreds of metres]
+    where dH = (tops_height − m20_level_height) / 1000  [units: km]
+
+    The divisor 1000 matches the legacy C encoding (raw uint8 at 100 m
+    resolution, divided by 10 in the C code).
 
     Args:
         tops: Echo-top heights in metres (NaN where no echo / invalid).
@@ -16,7 +19,7 @@ def compute_lhi(tops: xr.DataArray, m20_level: xr.DataArray) -> xr.DataArray:
     Returns:
         LHI values, NaN where input is masked.
     """
-    dh = (tops - m20_level) / 100.0
+    dh = (tops - m20_level) / 1000.0
     lhi = 100.0 + dh
     return xr.where(tops.notnull(), lhi, float("nan"))
 
