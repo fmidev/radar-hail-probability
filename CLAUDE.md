@@ -1,0 +1,64 @@
+# CLAUDE.md
+
+## Project Overview
+
+`radar-hail-probability` (hailathon) is a WIP modernization of a legacy weather radar data processing pipeline. The goal is to rewrite the production system in Python. The original pipeline generates hail probability fields — **POH** (Probability Of Hail) and **LHI** (Large Hail Index) — from IRIS radar composites and NWP data.
+
+**Core values**: Modern tools and standards, code readability and maintainability, reuse over reimplementation. Where applicable, leverage `scipy`, `xarray`, `wradlib`, and other established libraries for mathematical and radar-specific operations instead of reimplementing algorithms. **Do it the pythonic way.** This is not strictly a rewrite project, but rather a replacement with comparable functionality and results.
+
+## Architecture
+
+The legacy implementation (in `legacy/`) consists of:
+- **C programs**: Core processing logic (POH extraction, LHI/RAE mapping, coordinate generation)
+- **tcsh shell scripts**: Pipeline orchestration (`TOPSpipe.tcsh` is the main entry point)
+
+## Build & tooling
+
+Uses **Hatch** as the project manager and build backend (`hatchling` + `hatch-vcs` for version from git tags).
+
+No `setup.py` or `requirements.txt` — all metadata lives in `pyproject.toml`.
+
+## Airflow Integration
+
+This package is deployed as a containerized service in FMI's Airflow 2.11 radar production system. The integration pattern:
+
+- **Deployment**: Docker container with this package installed (built via [Containerfile](Containerfile), image `quay.io/fmi/radar-hail-probability:vx.y.z`).
+- **Airflow tasks**: Use `@task.docker` decorator to invoke Python API. Prefer taskflow.
+- **No DAGs in this repo**: Workflow orchestration lives in the separate Airflow radar production repository
+- **Robustness**: Handle missing/corrupted input files and edge cases gracefully, log processing steps
+
+### Style
+- Follow Black formatting
+- Naming, comments, etc. in English
+- Mention corresponding legacy names for key variables in comments/docstrings if helpful
+- It's better to briefly quote legacy code than to refer to line numbers
+- Use `logging` module for debug/info/warning/error messages
+- Type hinting for all functions
+- Succinct, to the point documentation
+- Avoid repeating bad practices from legacy code
+
+### Data flow (legacy)
+1. Input: IRIS radar composites — 45 dBZ and 50 dBZ TOPS products in cartesian IRIS format
+2. Model data: 0°C and −20°C isotherm heights from text files
+3. Processing: C programs combine radar and model data to compute POH and LHI fields
+4. Output: POH/LHI fields in IRIS format and GIF visualizations
+
+### Key domain concepts
+- **POH**: Probability Of Hail — primary output product
+- **LHI**: Large Hail Index — secondary output product
+- **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
+- **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
+
+## Repository Structure
+
+```
+legacy/          # Original production C code and tcsh scripts (reference only)
+src/             # python code
+tests/           # pytest tests
+```
+
+## Development Context
+
+- The Python rewrite is the active development target — no Python code exists yet
+- The legacy code in `legacy/` serves as reference for understanding the algorithms
+- The legacy C code depends on external headers (`sigtypes.h`, `product.h`, etc.) from the IRIS/FMI software environment — these are not in the repo and the legacy code is not expected to compile standalone
