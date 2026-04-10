@@ -224,8 +224,8 @@ class TestWriteGeotiff:
 
         with rasterio.open(out) as src:
             raw = src.read(1)
-            scale = float(src.tags(1)["scale"])
-            offset = float(src.tags(1)["offset"])
+            scale = src.scales[0]
+            offset = src.offsets[0]
             recovered = raw[::-1].astype(np.float64) * scale + offset
             np.testing.assert_allclose(recovered, values, atol=scale)
 

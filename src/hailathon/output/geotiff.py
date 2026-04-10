@@ -75,5 +75,7 @@ def write_geotiff(path: str, data: xr.DataArray, product: str) -> None:
         nodata=nodata,
     ) as dst:
         dst.write(raw, 1)
+        dst.scales = [scale]
+        dst.offsets = [offset]
         dst.update_tags(product=product)
-        dst.update_tags(1, scale=str(scale), offset=str(offset), undetect=str(undetect))
+        dst.update_tags(1, undetect=str(undetect))
