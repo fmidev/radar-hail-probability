@@ -118,7 +118,7 @@ def _select_time_index(nwp: xr.DataArray, target: datetime) -> int:
     """Return the NWP time index whose hour matches *target* (floored to HH:00).
 
     Mirrors legacy behaviour: ``date +%Y%m%d%H`` selects the exact hour.
-    Falls back to nearest available time if no exact match exists.
+    Falls back to nearest available time if within 1 hour; raises otherwise.
     """
     target_h = np.datetime64(
         target.replace(minute=0, second=0, microsecond=0, tzinfo=None)
@@ -128,10 +128,18 @@ def _select_time_index(nwp: xr.DataArray, target: datetime) -> int:
     exact = np.where(times == target_h)[0]
     if len(exact) > 0:
         return int(exact[0])
-    # Fallback: nearest available time
-    idx = int(np.abs(times - target_h).argmin())
+    # Fallback: nearest available time, but only within tolerance
+    deltas = np.abs(times - target_h)
+    idx = int(deltas.argmin())
+    gap = deltas[idx] / np.timedelta64(1, "h")
+    if gap > 1:
+        raise ValueError(
+            f"No NWP time within 1 h of {target_h}; "
+            f"nearest is {times[idx]} ({gap:.0f} h away). "
+            f"NWP file may be from a different model run."
+        )
     log.warning(
-        "No exact NWP time for %s; using nearest: %s (index %d)",
-        target_h, times[idx], idx,
+        "No exact NWP time for %s; using nearest: %s (index %d, %.0f h gap)",
+        target_h, times[idx], idx, gap,
     )
     return idx

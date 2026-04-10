@@ -62,9 +62,15 @@ class TestSelectTimeIndex:
         assert _select_time_index(nwp, target) == 1
 
     def test_nearest_fallback(self, nwp):
-        """If no exact match, use nearest."""
+        """If no exact match but within 1 h, use nearest."""
         target = datetime.datetime(2026, 4, 9, 3, 0, tzinfo=timezone.utc)
         assert _select_time_index(nwp, target) == 2  # closest to hour 3 is hour 2
+
+    def test_rejects_distant_time(self, nwp):
+        """Raise if nearest NWP time is more than 1 h away."""
+        target = datetime.datetime(2026, 4, 9, 10, 0, tzinfo=timezone.utc)
+        with pytest.raises(ValueError, match="No NWP time within 1 h"):
+            _select_time_index(nwp, target)
 
 
 # ---------------------------------------------------------------------------
