@@ -51,6 +51,8 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 - **LHI**: Large Hail Index — secondary output product
 - **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
 - **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
+- **undetect**: encodes pixels that have no physical TOPS value
+- **nodata**: encodes pixels that are outside radar composite coverage
 
 ## Repository Structure
 

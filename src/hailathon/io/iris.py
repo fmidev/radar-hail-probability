@@ -58,13 +58,17 @@ def read_tops(path: str) -> xr.DataArray:
     ydim = int(pc["y_size"])
 
     raw = _extract_raw_data(f, ydim, xdim)
-    heights = _decode_heights(raw)
+    heights, noecho = _decode_heights(raw)
     x, y = _coords_for_shape(ydim, xdim)
 
     return xr.DataArray(
         heights,
         dims=["y", "x"],
-        coords={"x": ("x", x), "y": ("y", y)},
+        coords={
+            "x": ("x", x),
+            "y": ("y", y),
+            "noecho": (("y", "x"), noecho),
+        },
         attrs={
             "units": "m",
             "long_name": "radar echo top height",
@@ -93,12 +97,18 @@ def _extract_raw_data(
     return raw
 
 
-def _decode_heights(raw: np.ndarray) -> np.ndarray:
-    """Convert raw uint8 array to float32 heights in metres, masking sentinels."""
-    mask = (raw == _NO_ECHO) | (raw == _SPECIAL) | (raw == _UNDEFINED)
+def _decode_heights(raw: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Convert raw uint8 array to float32 heights in metres, masking sentinels.
+
+    Returns:
+        (heights, noecho) where *heights* is float32 with NaN for masked pixels
+        and *noecho* is a bool array (True where the radar detected no echo).
+    """
+    noecho = raw == _NO_ECHO
+    mask = noecho | (raw == _SPECIAL) | (raw == _UNDEFINED)
     heights = (raw.astype(np.float32) - _HEIGHT_OFFSET) * _HEIGHT_SCALE_M
     heights[mask] = np.nan
-    return heights
+    return heights, noecho
 
 
 def _coords_for_shape(ydim: int, xdim: int) -> tuple[np.ndarray, np.ndarray]:

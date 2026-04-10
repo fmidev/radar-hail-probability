@@ -33,8 +33,8 @@ _PRODUCT_ENCODING: dict[str, dict] = {
         "undetect": 0.0,
     },
     "LHI": {
-        "gain": 1.0,
-        "offset": 0.0,
+        "gain": 100.0,
+        "offset": -100.0,
         "nodata": 255.0,
         "undetect": 0.0,
     },
@@ -63,7 +63,8 @@ def write_odim(
     time_str = ts.strftime("%H%M%S")
 
     encoding = _PRODUCT_ENCODING[product]
-    raw = _encode_data(data.values, encoding)
+    noecho = data.coords["noecho"].values if "noecho" in data.coords else None
+    raw = _encode_data(data.values, encoding, noecho=noecho)
 
     x = data.coords["x"].values
     y = data.coords["y"].values
@@ -85,12 +86,17 @@ def _parse_odim_time(timestamp: str) -> datetime:
     raise ValueError(f"Cannot parse timestamp: {timestamp!r}")
 
 
-def _encode_data(values: np.ndarray, encoding: dict) -> np.ndarray:
+def _encode_data(
+    values: np.ndarray,
+    encoding: dict,
+    *,
+    noecho: np.ndarray | None = None,
+) -> np.ndarray:
     """Encode float values to uint8 using ODIM gain/offset convention.
 
     ODIM convention: ``physical = gain * raw + offset``,
     so ``raw = (physical - offset) / gain``.
-    NaN pixels become ``nodata``.
+    NaN pixels become ``nodata``; pixels flagged in *noecho* become ``undetect``.
     """
     gain = encoding["gain"]
     offset = encoding["offset"]
@@ -103,6 +109,10 @@ def _encode_data(values: np.ndarray, encoding: dict) -> np.ndarray:
     # Clamp to valid uint8 range, reserving nodata and undetect
     scaled = np.clip(scaled, 1, 254)
     raw[valid] = scaled.astype(np.uint8)
+
+    if noecho is not None:
+        raw[noecho] = undetect
+
     return raw
 
 

@@ -55,13 +55,20 @@ class TestEncodeData:
         raw = _encode_data(values, _PRODUCT_ENCODING["POH"])
         assert raw[0, 0] == 255
 
+    def test_noecho_becomes_undetect(self):
+        values = np.array([[np.nan, 0.5]], dtype=np.float32)
+        noecho = np.array([[True, False]])
+        raw = _encode_data(values, _PRODUCT_ENCODING["POH"], noecho=noecho)
+        assert raw[0, 0] == 0   # undetect
+        assert raw[0, 1] != 0   # valid value
+
     def test_lhi_round_trip(self):
-        """Encode LHI value and verify it can be decoded back."""
+        """Encode LHI metre value and verify it can be decoded back."""
         enc = _PRODUCT_ENCODING["LHI"]
-        values = np.array([[102.0]], dtype=np.float32)
+        values = np.array([[2000.0]], dtype=np.float32)
         raw = _encode_data(values, enc)
         decoded = raw[0, 0] * enc["gain"] + enc["offset"]
-        assert decoded == pytest.approx(102.0)
+        assert decoded == pytest.approx(2000.0)
 
 
 class TestWriteOdim:
@@ -153,11 +160,11 @@ class TestWriteOdim:
             np.testing.assert_allclose(recovered, values, atol=gain)
 
     def test_lhi_product(self, tmp_path):
-        """LHI values round-trip correctly."""
+        """LHI metre values round-trip correctly."""
         import h5py
         y = np.array([0.0, 1000.0])
         x = np.array([0.0, 1000.0])
-        values = np.array([[100.0, 103.0], [98.0, 105.0]], dtype=np.float32)
+        values = np.array([[2000.0, 3500.0], [500.0, 5000.0]], dtype=np.float32)
         da = xr.DataArray(values, dims=["y", "x"], coords={"x": ("x", x), "y": ("y", y)})
 
         out = str(tmp_path / "lhi.h5")
@@ -195,16 +202,17 @@ class TestWriteGeotiff:
             assert src.crs is not None
             assert "stere" in src.crs.to_proj4()
 
-    def test_nodata_is_nan(self, tmp_path, sample_data):
+    def test_nodata_is_255(self, tmp_path, sample_data):
         import rasterio
         out = str(tmp_path / "test.tif")
         write_geotiff(out, sample_data, "POH")
 
         with rasterio.open(out) as src:
-            assert np.isnan(src.nodata)
+            assert src.nodata == 255
+            assert src.dtypes[0] == "uint8"
 
     def test_values_round_trip(self, tmp_path):
-        """Write known values and read them back."""
+        """Write known POH values and recover via scale/offset."""
         import rasterio
         y = np.array([0.0, 1000.0])
         x = np.array([0.0, 1000.0])
@@ -215,21 +223,22 @@ class TestWriteGeotiff:
         write_geotiff(out, da, "POH")
 
         with rasterio.open(out) as src:
-            arr = src.read(1)
-            # GeoTIFF is north-up (row 0 = north), so flip back
-            arr_flipped = arr[::-1]
-            np.testing.assert_allclose(arr_flipped, values)
+            raw = src.read(1)
+            scale = float(src.tags(1)["scale"])
+            offset = float(src.tags(1)["offset"])
+            recovered = raw[::-1].astype(np.float64) * scale + offset
+            np.testing.assert_allclose(recovered, values, atol=scale)
 
-    def test_nan_pixels_preserved(self, tmp_path, sample_data):
-        """NaN in input should remain NaN in the output."""
+    def test_nan_pixels_become_nodata(self, tmp_path, sample_data):
+        """NaN in input should become nodata (255) in the output."""
         import rasterio
         out = str(tmp_path / "test.tif")
         write_geotiff(out, sample_data, "POH")
 
         with rasterio.open(out) as src:
-            arr = src.read(1)
-            # Row 0 in TIFF = top = last row of our array (all NaN)
-            assert np.all(np.isnan(arr[0, :]))
+            raw = src.read(1)
+            # Row 0 in TIFF = top = last row of our array (all NaN → 255)
+            assert np.all(raw[0, :] == 255)
 
     def test_product_tag(self, tmp_path, sample_data):
         import rasterio
@@ -254,3 +263,25 @@ class TestWriteGeotiff:
             # y: centres 0, 1000, 2000, 3000 with dy=1000 → edges -500 to 3500
             assert bounds.bottom == pytest.approx(-500.0)
             assert bounds.top == pytest.approx(3500.0)
+
+    def test_noecho_becomes_undetect(self, tmp_path):
+        """Pixels with noecho=True should be encoded as undetect (0)."""
+        import rasterio
+        y = np.array([0.0, 1000.0])
+        x = np.array([0.0, 1000.0])
+        values = np.array([[np.nan, 0.5], [np.nan, 0.8]], dtype=np.float32)
+        noecho = np.array([[True, False], [False, False]])
+        da = xr.DataArray(
+            values, dims=["y", "x"],
+            coords={"x": ("x", x), "y": ("y", y), "noecho": (("y", "x"), noecho)},
+        )
+
+        out = str(tmp_path / "test.tif")
+        write_geotiff(out, da, "POH")
+
+        with rasterio.open(out) as src:
+            raw = src.read(1)
+            # Flip back to south-up for comparison
+            raw = raw[::-1]
+            assert raw[0, 0] == 0    # noecho → undetect
+            assert raw[1, 0] == 255  # NaN without noecho → nodata

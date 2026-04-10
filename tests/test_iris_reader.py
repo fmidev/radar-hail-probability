@@ -10,53 +10,59 @@ class TestDecodeHeights:
     def test_normal_value_decodes_to_metres(self):
         # raw = height_m/100 + 1  →  raw 21 = 2000 m
         raw = np.array([[21]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert result[0, 0] == pytest.approx(2000.0)
+        heights, noecho = _decode_heights(raw)
+        assert heights[0, 0] == pytest.approx(2000.0)
+        assert not noecho[0, 0]
 
     def test_raw_1_decodes_to_zero_metres(self):
         raw = np.array([[1]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert result[0, 0] == pytest.approx(0.0)
+        heights, _ = _decode_heights(raw)
+        assert heights[0, 0] == pytest.approx(0.0)
 
     def test_raw_101_decodes_to_10000_metres(self):
         # 10 km echo top
         raw = np.array([[101]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert result[0, 0] == pytest.approx(10000.0)
+        heights, _ = _decode_heights(raw)
+        assert heights[0, 0] == pytest.approx(10000.0)
 
     def test_no_echo_becomes_nan(self):
         raw = np.array([[_NO_ECHO]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert np.isnan(result[0, 0])
+        heights, noecho = _decode_heights(raw)
+        assert np.isnan(heights[0, 0])
+        assert noecho[0, 0]
 
     def test_special_becomes_nan(self):
         raw = np.array([[_SPECIAL]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert np.isnan(result[0, 0])
+        heights, noecho = _decode_heights(raw)
+        assert np.isnan(heights[0, 0])
+        assert not noecho[0, 0]
 
     def test_undefined_becomes_nan(self):
         raw = np.array([[_UNDEFINED]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert np.isnan(result[0, 0])
+        heights, noecho = _decode_heights(raw)
+        assert np.isnan(heights[0, 0])
+        assert not noecho[0, 0]
 
     def test_mixed_array(self):
         raw = np.array([[_NO_ECHO, 21, _UNDEFINED, _SPECIAL, 51]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert np.isnan(result[0, 0])
-        assert result[0, 1] == pytest.approx(2000.0)
-        assert np.isnan(result[0, 2])
-        assert np.isnan(result[0, 3])
-        assert result[0, 4] == pytest.approx(5000.0)
+        heights, noecho = _decode_heights(raw)
+        assert np.isnan(heights[0, 0])
+        assert heights[0, 1] == pytest.approx(2000.0)
+        assert np.isnan(heights[0, 2])
+        assert np.isnan(heights[0, 3])
+        assert heights[0, 4] == pytest.approx(5000.0)
+        np.testing.assert_array_equal(noecho[0], [True, False, False, False, False])
 
     def test_output_dtype_is_float32(self):
         raw = np.array([[21]], dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert result.dtype == np.float32
+        heights, _ = _decode_heights(raw)
+        assert heights.dtype == np.float32
 
     def test_preserves_shape(self):
         raw = np.zeros((10, 20), dtype=np.uint8)
-        result = _decode_heights(raw)
-        assert result.shape == (10, 20)
+        heights, noecho = _decode_heights(raw)
+        assert heights.shape == (10, 20)
+        assert noecho.shape == (10, 20)
 
 
 class _FakeIrisFile:

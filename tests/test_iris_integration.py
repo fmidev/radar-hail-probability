@@ -108,3 +108,14 @@ class TestReadTops:
         assert not np.any(valid < 0), "Negative height from raw=0 not masked"
         assert not np.any(valid == 25300), "raw=254 not masked"
         assert not np.any(valid == 25400), "raw=255 not masked"
+
+    def test_has_noecho_coordinate(self, tops_file):
+        """read_tops should attach a boolean noecho coordinate."""
+        path, _ = tops_file
+        result = read_tops(path)
+        assert "noecho" in result.coords
+        noecho = result.coords["noecho"].values
+        assert noecho.dtype == bool
+        assert noecho.shape == result.shape
+        # No-echo pixels are common in composites (typically >50%)
+        assert noecho.mean() > 0.5

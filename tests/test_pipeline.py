@@ -89,9 +89,14 @@ class TestProcess:
         y = np.arange(4, dtype=np.float64) * 1000
         x = np.arange(3, dtype=np.float64) * 1000
         data = np.full((4, 3), value, dtype=np.float32)
+        noecho = np.zeros((4, 3), dtype=bool)
         return xr.DataArray(
             data, dims=["y", "x"],
-            coords={"x": ("x", x), "y": ("y", y)},
+            coords={
+                "x": ("x", x),
+                "y": ("y", y),
+                "noecho": (("y", "x"), noecho),
+            },
         )
 
     def _make_nwp(self, value: float) -> xr.DataArray:
@@ -193,7 +198,8 @@ class TestProcess:
 
         # Check the LHI array passed to write_odim (second call, second positional arg)
         lhi_arg = mock_odim.call_args_list[1][0][1]
-        expected_lhi = 100.0 + 2.0
+        # tops_50 = 6000 m, m20 = 4000 m → LHI = 2000 m
+        expected_lhi = 2000.0
         np.testing.assert_allclose(
             lhi_arg.values, expected_lhi, atol=0.01,
         )

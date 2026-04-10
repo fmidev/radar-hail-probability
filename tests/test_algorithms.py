@@ -73,25 +73,25 @@ class TestComputePoh:
 
 class TestComputeLhi:
     def test_formula_when_tops_equals_m20(self):
-        # dH = 0 → LHI = 100
+        # dH = 0 m
         tops = _da([5000.0])
         m20 = _da([5000.0])
         result = compute_lhi(tops, m20)
-        assert float(result[0]) == pytest.approx(100.0)
+        assert float(result[0]) == pytest.approx(0.0)
 
     def test_tops_above_m20(self):
-        # tops 2 km above -20 level: dH = 2 → LHI = 102
+        # tops 2000 m above -20 level
         tops = _da([7000.0])
         m20 = _da([5000.0])
         result = compute_lhi(tops, m20)
-        assert float(result[0]) == pytest.approx(102.0)
+        assert float(result[0]) == pytest.approx(2000.0)
 
     def test_tops_below_m20(self):
-        # dH = -1 → LHI = 99
+        # tops 1000 m below -20 level
         tops = _da([4000.0])
         m20 = _da([5000.0])
         result = compute_lhi(tops, m20)
-        assert float(result[0]) == pytest.approx(99.0)
+        assert float(result[0]) == pytest.approx(-1000.0)
 
     def test_nan_tops_propagates(self):
         tops = _da([np.nan])
@@ -107,30 +107,30 @@ class TestComputeThi:
     def _zero(self, val):
         return _da([float(val)])
 
-    def test_zero_below_1200m_adds_2(self):
-        result = compute_thi(self._lhi(100), self._zero(1000.0))
-        assert float(result[0]) == pytest.approx(102.0)
+    def test_zero_below_1200m_adds_2000(self):
+        result = compute_thi(self._lhi(3000), self._zero(1000.0))
+        assert float(result[0]) == pytest.approx(5000.0)
 
-    def test_zero_at_1200m_boundary_adds_2(self):
-        result = compute_thi(self._lhi(100), self._zero(1200.0))
-        assert float(result[0]) == pytest.approx(102.0)
+    def test_zero_at_1200m_boundary_adds_2000(self):
+        result = compute_thi(self._lhi(3000), self._zero(1200.0))
+        assert float(result[0]) == pytest.approx(5000.0)
 
-    def test_zero_between_1200_and_1700_adds_1(self):
-        result = compute_thi(self._lhi(100), self._zero(1500.0))
-        assert float(result[0]) == pytest.approx(101.0)
+    def test_zero_between_1200_and_1700_adds_1000(self):
+        result = compute_thi(self._lhi(3000), self._zero(1500.0))
+        assert float(result[0]) == pytest.approx(4000.0)
 
-    def test_zero_at_1700m_boundary_adds_1(self):
-        result = compute_thi(self._lhi(100), self._zero(1700.0))
-        assert float(result[0]) == pytest.approx(101.0)
+    def test_zero_at_1700m_boundary_adds_1000(self):
+        result = compute_thi(self._lhi(3000), self._zero(1700.0))
+        assert float(result[0]) == pytest.approx(4000.0)
 
     def test_zero_between_1700_and_3500_unchanged(self):
-        result = compute_thi(self._lhi(100), self._zero(2500.0))
-        assert float(result[0]) == pytest.approx(100.0)
+        result = compute_thi(self._lhi(3000), self._zero(2500.0))
+        assert float(result[0]) == pytest.approx(3000.0)
 
     def test_zero_at_3500m_boundary_unchanged(self):
-        result = compute_thi(self._lhi(100), self._zero(3500.0))
-        assert float(result[0]) == pytest.approx(100.0)
+        result = compute_thi(self._lhi(3000), self._zero(3500.0))
+        assert float(result[0]) == pytest.approx(3000.0)
 
-    def test_zero_above_3500_subtracts_1(self):
-        result = compute_thi(self._lhi(100), self._zero(4000.0))
-        assert float(result[0]) == pytest.approx(99.0)
+    def test_zero_above_3500_subtracts_1000(self):
+        result = compute_thi(self._lhi(3000), self._zero(4000.0))
+        assert float(result[0]) == pytest.approx(2000.0)

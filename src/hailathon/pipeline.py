@@ -69,6 +69,11 @@ def process(
     poh = compute_poh(tops_45, zero_level)
     lhi = compute_lhi(tops_50, m20_level)
     thi = compute_thi(lhi, zero_level)
+
+    # Carry the no-echo mask from TOPS to products so writers can
+    # distinguish "undetect" (no radar echo) from "nodata" (missing).
+    poh.coords["noecho"] = tops_45.coords["noecho"]
+    lhi.coords["noecho"] = tops_50.coords["noecho"]
     log.info("Products computed: POH, LHI, THI")
 
     # -- Write outputs -------------------------------------------------
