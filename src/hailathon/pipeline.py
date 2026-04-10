@@ -81,7 +81,8 @@ def process(
     paths["poh_tif"] = os.path.join(output_dir, f"poh_{ts_str}.tif")
     paths["lhi_tif"] = os.path.join(output_dir, f"lhi_{ts_str}.tif")
 
-    write_odim(paths["poh_odim"], poh, lhi, timestamp)
+    write_odim(paths["poh_odim"], poh, "POH", timestamp)
+    write_odim(paths["lhi_odim"], lhi, "LHI", timestamp)
     write_geotiff(paths["poh_tif"], poh, "POH")
     write_geotiff(paths["lhi_tif"], lhi, "LHI")
 

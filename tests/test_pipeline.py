@@ -134,8 +134,8 @@ class TestProcess:
         assert "poh_tif" in result
         assert "lhi_tif" in result
 
-        # Verify writers were called
-        mock_odim.assert_called_once()
+        # Verify writers were called (ODIM once per product, GeoTIFF once per product)
+        assert mock_odim.call_count == 2
         assert mock_tif.call_count == 2
 
     @patch("hailathon.pipeline.write_geotiff")
@@ -161,8 +161,8 @@ class TestProcess:
             "20260409T0000Z",
         )
 
-        # Check the POH array passed to write_odim
-        poh_arg = mock_odim.call_args[0][1]  # second positional arg
+        # Check the POH array passed to write_odim (first call, second positional arg)
+        poh_arg = mock_odim.call_args_list[0][0][1]
         expected_poh = 0.319 + 0.133 * 3.0  # dH = 3 km
         np.testing.assert_allclose(
             poh_arg.values, expected_poh, atol=0.01,
@@ -191,7 +191,8 @@ class TestProcess:
             "20260409T0000Z",
         )
 
-        lhi_arg = mock_odim.call_args[0][2]  # third positional arg
+        # Check the LHI array passed to write_odim (second call, second positional arg)
+        lhi_arg = mock_odim.call_args_list[1][0][1]
         expected_lhi = 100.0 + 2.0
         np.testing.assert_allclose(
             lhi_arg.values, expected_lhi, atol=0.01,
