@@ -1,7 +1,5 @@
 """Top-level processing pipeline invoked by the Airflow DockerOperator."""
 
-from __future__ import annotations
-
 import os
 
 

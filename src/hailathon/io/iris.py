@@ -1,12 +1,15 @@
 """Read IRIS radar composite TOPS products."""
 
-from __future__ import annotations
-
 import numpy as np
 import xarray as xr
 from wradlib.io.iris import IrisCartesianProductFile
 
-from hailathon.projection.grid import CRS
+from hailathon.projection.grid import (
+    CRS,
+    LARGE_SHAPE, LARGE_X0, LARGE_Y0, LARGE_DX, LARGE_DY,
+    STANDARD_SHAPE, STANDARD_X0, STANDARD_Y0, STANDARD_DX, STANDARD_DY,
+    grid_coords,
+)
 
 # Special sentinel values in the FMI IRIS TOPS encoding (raw uint8)
 _NO_ECHO = 0
@@ -21,6 +24,15 @@ _UNDEFINED = 255
 _HEIGHT_SCALE_M = 100
 _HEIGHT_OFFSET = 1
 
+# Map from (rows, cols) shape to (x0, y0, dx, dy) in projection metres.
+# x_scale/y_scale in the IRIS product header are ~5 % smaller than
+# the values derived from the legacy geographic extents; the latter
+# are used here as the authoritative source.
+_GRID_PARAMS: dict[tuple[int, int], tuple[float, float, float, float]] = {
+    LARGE_SHAPE:    (LARGE_X0,    LARGE_Y0,    LARGE_DX,    LARGE_DY),
+    STANDARD_SHAPE: (STANDARD_X0, STANDARD_Y0, STANDARD_DX, STANDARD_DY),
+}
+
 
 def read_tops(path: str) -> xr.DataArray:
     """Read an IRIS TOPS product and return echo-top heights as a DataArray.
@@ -28,17 +40,16 @@ def read_tops(path: str) -> xr.DataArray:
     Decodes the FMI height encoding: ``height_m = (raw - 1) * 100``.
     Special values (0 = no echo, 254 = special, 255 = undefined) become NaN.
 
-    Grid coordinates are expressed in metres relative to the domain centre,
-    consistent with the FIN1000 stereographic projection.  Absolute
-    geo-referencing against the projection origin is done in the projection
-    layer, not here.
+    Pixel-centre coordinates in the FIN1000 stereographic projection are
+    attached as ``x`` and ``y`` dimension coordinates.  The CRS is stored
+    as a ``crs_wkt`` scalar attribute.
 
     Args:
         path: Path to the IRIS binary file.
 
     Returns:
         2-D DataArray (dims ``y``, ``x``) with echo-top heights in metres
-        and NaN where masked.  Scalar attribute ``crs_wkt`` carries the CRS.
+        and NaN where masked.
     """
     f = IrisCartesianProductFile(str(path), loaddata=True, rawdata=True)
     pc = f.product_hdr["product_configuration"]
@@ -48,7 +59,7 @@ def read_tops(path: str) -> xr.DataArray:
 
     raw = _extract_raw_data(f, ydim, xdim)
     heights = _decode_heights(raw)
-    x, y = _pixel_coords(pc, xdim, ydim)
+    x, y = _coords_for_shape(ydim, xdim)
 
     return xr.DataArray(
         heights,
@@ -90,19 +101,13 @@ def _decode_heights(raw: np.ndarray) -> np.ndarray:
     return heights
 
 
-def _pixel_coords(
-    pc: dict, xdim: int, ydim: int
-) -> tuple[np.ndarray, np.ndarray]:
-    """Compute pixel centre coordinates in metres relative to the domain centre.
-
-    IRIS stores ``x_location`` and ``y_location`` as the centre pixel index
-    multiplied by 1000, and ``x_scale`` / ``y_scale`` as pixel size in cm.
-    """
-    dx = pc["x_scale"] / 100.0  # cm → m
-    dy = pc["y_scale"] / 100.0
-    cx = pc["x_location"] / 1000.0  # fractional centre pixel index
-    cy = pc["y_location"] / 1000.0
-
-    x = (np.arange(xdim) - cx) * dx
-    y = (np.arange(ydim) - cy) * dy
-    return x, y
+def _coords_for_shape(ydim: int, xdim: int) -> tuple[np.ndarray, np.ndarray]:
+    """Return absolute FIN1000 pixel-centre coordinates for the given grid shape."""
+    shape = (ydim, xdim)
+    if shape not in _GRID_PARAMS:
+        raise ValueError(
+            f"Unrecognised grid shape {shape}. "
+            f"Known shapes: {list(_GRID_PARAMS)}"
+        )
+    x0, y0, dx, dy = _GRID_PARAMS[shape]
+    return grid_coords(shape, x0=x0, y0=y0, dx=dx, dy=dy)

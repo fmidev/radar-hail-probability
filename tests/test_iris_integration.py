@@ -54,6 +54,23 @@ class TestReadTops:
         assert np.all(np.diff(result.coords["x"].values) > 0)
         assert np.all(np.diff(result.coords["y"].values) > 0)
 
+    def test_coords_cover_finland(self, tops_file):
+        """x/y extent should span several hundred km — sanity check on scale."""
+        path, _ = tops_file
+        result = read_tops(path)
+        x_span = result.coords["x"].values[-1] - result.coords["x"].values[0]
+        y_span = result.coords["y"].values[-1] - result.coords["y"].values[0]
+        assert x_span > 500_000, f"x span {x_span:.0f} m too small"
+        assert y_span > 500_000, f"y span {y_span:.0f} m too small"
+
+    def test_large_domain_x_starts_near_zero(self, tops_file):
+        """Large domain SW corner sits at projection origin (x0=0, y0=0)."""
+        path, meta = tops_file
+        if meta["shape"] != (2625, 1628):
+            pytest.skip("Only applies to large domain")
+        result = read_tops(path)
+        assert result.coords["x"].values[0] == pytest.approx(250.0, abs=10)
+
     def test_units_attribute_is_metres(self, tops_file):
         path, _ = tops_file
         result = read_tops(path)
