@@ -11,8 +11,8 @@ from hailathon.algorithms.lhi import compute_lhi, compute_thi
 from hailathon.algorithms.poh import compute_poh
 from hailathon.io.iris import read_tops
 from hailathon.io.nwp import interpolate_to_grid, read_isotherm_text
-from hailathon.output.geotiff import write_geotiff
-from hailathon.output.odim import write_odim
+from hailathon.io.geotiff import write_geotiff
+from hailathon.io.odim import write_odim
 
 log = logging.getLogger(__name__)
 

@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from hailathon.output.odim import write_odim, _encode_data, _PRODUCT_ENCODING
-from hailathon.output.geotiff import write_geotiff
+from hailathon.io.odim import write_odim, _encode_data, _PRODUCT_ENCODING
+from hailathon.io.geotiff import write_geotiff
 
 
 # ---------------------------------------------------------------------------
