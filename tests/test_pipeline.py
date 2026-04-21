@@ -141,13 +141,17 @@ class TestProcess:
         )
 
         assert "poh_odim" in result
+        assert "hhi_odim" in result
         assert "lhi_odim" in result
+        assert "thi_odim" in result
         assert "poh_tif" in result
+        assert "hhi_tif" in result
         assert "lhi_tif" in result
+        assert "thi_tif" in result
 
-        # Verify writers were called (ODIM once per product, GeoTIFF once per product)
-        assert mock_odim.call_count == 2
-        assert mock_tif.call_count == 2
+        # Verify writers were called once per product
+        assert mock_odim.call_count == 4
+        assert mock_tif.call_count == 4
 
     @patch("hailathon.pipeline.write_geotiff")
     @patch("hailathon.pipeline.write_odim")
@@ -202,8 +206,8 @@ class TestProcess:
             "20260409T0000Z",
         )
 
-        # Check the LHI array passed to write_odim (second call, second positional arg)
-        lhi_arg = mock_odim.call_args_list[1][0][1]
+        # Check the LHI array passed to write_odim (third call: POH, HHI, LHI, THI)
+        lhi_arg = mock_odim.call_args_list[2][0][1]
         # tops_50 = 6000 m, m20 = 4000 m → LHI = 2000 m
         expected_lhi = 2000.0
         np.testing.assert_allclose(

@@ -18,6 +18,13 @@ Uses **Hatch** as the project manager and build backend (`hatchling` + `hatch-vc
 
 No `setup.py` or `requirements.txt` — all metadata lives in `pyproject.toml`.
 
+## Commands
+
+```sh
+# Activate virtualenv
+/home/tiira/.virtualenvs/radar-hail-probability/bin/activate
+
+
 ## Airflow Integration
 
 This package is deployed as a containerized service in FMI's Airflow v2.11 radar production system. The integration pattern:
@@ -47,12 +54,19 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 4. Output: POH/LHI fields in IRIS format and GIF visualizations
 
 ## Key domain concepts
-- **POH**: Probability Of Hail — primary output product
-- **LHI**: Large Hail Index — secondary output product
-- **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
-- **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
-- **undetect**: encodes pixels that have no physical TOPS value
-- **nodata**: encodes pixels that are outside radar composite coverage
+* **POH**: Probability Of Hail — primary output product
+* **LHI**: Large Hail Index — secondary output product
+* **HHI**: Holleman Hail Index, Modified POH using 0.1 probability units, no upper limit. Formula 10*POH
+* **THI**: Tuovinen Hail Index, modified HHI
+  * TOP <= 1200m, THI=HHI+2
+  * 1200m < TOP <= 1700m, THI=HHI+1
+  * 1700m < TOP <= 3500m, THI=HHI
+  * TOP > 3500m, THI=HHI-1
+* **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
+* **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
+* **undetect**: encodes pixels that have no physical TOPS value
+* **nodata**: encodes pixels that are outside radar composite coverage
+
 
 ## Repository Structure
 

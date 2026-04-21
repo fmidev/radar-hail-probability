@@ -1,4 +1,4 @@
-"""LHI (Large Hail Index) and THI (Temperature-adjusted Hail Index) computation."""
+"""LHI (Large Hail Index) and THI (Tuovinen Hail Index) computation."""
 
 import xarray as xr
 
@@ -23,25 +23,22 @@ def compute_lhi(tops: xr.DataArray, m20_level: xr.DataArray) -> xr.DataArray:
     return xr.where(tops.notnull(), lhi, float("nan"))
 
 
-def compute_thi(lhi: xr.DataArray, zero_level: xr.DataArray) -> xr.DataArray:
-    """Compute Temperature-adjusted Hail Index (THI) by correcting LHI for zero-level height.
+def compute_thi(hhi: xr.DataArray, zero_level: xr.DataArray) -> xr.DataArray:
+    """Compute Tuovinen Hail Index (THI) by adjusting HHI for zero-level height.
 
-    Applies the zero-isotherm adjustment from the legacy RAE_map_modindex
-    algorithm, converted to metres:
-
-    - zero_level ≤ 1200 m:  LHI + 2000 m
-    - zero_level ≤ 1700 m:  LHI + 1000 m
-    - zero_level ≤ 3500 m:  LHI unchanged
-    - zero_level  > 3500 m:  LHI − 1000 m
+    - zero_level ≤ 1200 m:  HHI + 2
+    - zero_level ≤ 1700 m:  HHI + 1
+    - zero_level ≤ 3500 m:  HHI unchanged
+    - zero_level  > 3500 m:  HHI − 1
 
     Args:
-        lhi: Large Hail Index in metres.
+        hhi: Holleman Hail Index values.
         zero_level: 0°C isotherm heights in metres.
 
     Returns:
-        THI in metres, NaN where LHI is masked.
+        THI values, NaN where HHI is masked.
     """
-    adj = xr.where(zero_level <= 1200, 2000,
-          xr.where(zero_level <= 1700, 1000,
-          xr.where(zero_level <= 3500, 0, -1000)))
-    return lhi + adj
+    adj = xr.where(zero_level <= 1200, 2,
+          xr.where(zero_level <= 1700, 1,
+          xr.where(zero_level <= 3500, 0, -1)))
+    return xr.where(hhi.notnull(), hhi + adj, float("nan"))

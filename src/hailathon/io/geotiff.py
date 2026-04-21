@@ -12,6 +12,8 @@ from hailathon.projection.grid import CRS
 _ENCODING: dict[str, dict] = {
     "POH": {"scale": 1.0 / 250, "offset": 0.0, "nodata": 255, "undetect": 0},
     "LHI": {"scale": 100.0, "offset": -100.0, "nodata": 255, "undetect": 0},
+    "HHI": {"scale": 0.1, "offset": -0.1, "nodata": 255, "undetect": 0},
+    "THI": {"scale": 0.1, "offset": -0.1, "nodata": 255, "undetect": 0},
 }
 
 

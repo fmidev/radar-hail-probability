@@ -1,7 +1,25 @@
-"""POH (Probability Of Hail) computation."""
+"""POH (Probability Of Hail) and HHI (Holleman Hail Index) computation."""
 
 import numpy as np
 import xarray as xr
+
+
+def compute_hhi(tops: xr.DataArray, zero_level: xr.DataArray) -> xr.DataArray:
+    """Compute Holleman Hail Index (HHI = 10 × raw POH, no upper limit).
+
+    Unlike :func:`compute_poh`, the formula is not clipped, so HHI can
+    exceed 10 for very deep convection.
+
+    Args:
+        tops: Echo-top heights in metres (NaN where no echo / invalid).
+        zero_level: 0°C isotherm heights in metres, on the same grid.
+
+    Returns:
+        HHI values (10 × probability units, no upper limit), NaN where masked.
+    """
+    dh = (tops - zero_level) / 1000.0
+    hhi = 10.0 * (0.319 + 0.133 * dh)
+    return xr.where(np.isfinite(hhi), hhi, np.nan)
 
 
 def compute_poh(tops: xr.DataArray, zero_level: xr.DataArray) -> xr.DataArray:

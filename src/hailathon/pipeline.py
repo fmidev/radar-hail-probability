@@ -8,7 +8,7 @@ import numpy as np
 import xarray as xr
 
 from hailathon.algorithms.lhi import compute_lhi, compute_thi
-from hailathon.algorithms.poh import compute_poh
+from hailathon.algorithms.poh import compute_hhi, compute_poh
 from hailathon.io.iris import read_tops
 from hailathon.io.nwp import interpolate_to_grid, read_isotherm_text
 from hailathon.io.geotiff import write_geotiff
@@ -67,14 +67,17 @@ def process(
 
     # -- Compute hail products -----------------------------------------
     poh = compute_poh(tops_45, zero_level)
+    hhi = compute_hhi(tops_45, zero_level)
     lhi = compute_lhi(tops_50, m20_level)
-    thi = compute_thi(lhi, zero_level)
+    thi = compute_thi(hhi, zero_level)
 
     # Carry the no-echo mask from TOPS to products so writers can
     # distinguish "undetect" (no radar echo) from "nodata" (missing).
     poh.coords["noecho"] = tops_45.coords["noecho"]
+    hhi.coords["noecho"] = tops_45.coords["noecho"]
     lhi.coords["noecho"] = tops_50.coords["noecho"]
-    log.info("Products computed: POH, LHI, THI")
+    thi.coords["noecho"] = tops_45.coords["noecho"]
+    log.info("Products computed: POH, HHI, LHI, THI")
 
     # -- Write outputs -------------------------------------------------
     os.makedirs(output_dir, exist_ok=True)
@@ -82,14 +85,22 @@ def process(
 
     paths: dict[str, str] = {}
     paths["poh_odim"] = os.path.join(output_dir, f"poh_{ts_str}.h5")
+    paths["hhi_odim"] = os.path.join(output_dir, f"hhi_{ts_str}.h5")
     paths["lhi_odim"] = os.path.join(output_dir, f"lhi_{ts_str}.h5")
+    paths["thi_odim"] = os.path.join(output_dir, f"thi_{ts_str}.h5")
     paths["poh_tif"] = os.path.join(output_dir, f"poh_{ts_str}.tif")
+    paths["hhi_tif"] = os.path.join(output_dir, f"hhi_{ts_str}.tif")
     paths["lhi_tif"] = os.path.join(output_dir, f"lhi_{ts_str}.tif")
+    paths["thi_tif"] = os.path.join(output_dir, f"thi_{ts_str}.tif")
 
     write_odim(paths["poh_odim"], poh, "POH", timestamp)
+    write_odim(paths["hhi_odim"], hhi, "HHI", timestamp)
     write_odim(paths["lhi_odim"], lhi, "LHI", timestamp)
+    write_odim(paths["thi_odim"], thi, "THI", timestamp)
     write_geotiff(paths["poh_tif"], poh, "POH")
+    write_geotiff(paths["hhi_tif"], hhi, "HHI")
     write_geotiff(paths["lhi_tif"], lhi, "LHI")
+    write_geotiff(paths["thi_tif"], thi, "THI")
 
     log.info("Outputs written to %s", output_dir)
     return paths

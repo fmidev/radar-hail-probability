@@ -23,8 +23,10 @@ _ODIM_VERSION = "H5rad 2.4"
 _SOURCE = "NOD:fimaa,ORG:86,CTY:613,PLC:Finland"
 
 # Encoding parameters per product.
-# POH [0, 1]  → uint8 with gain=1/250, offset=0 → raw range 0–250
-# LHI ~[90, 120+] → uint8 with gain=1.0, offset=0 → stored directly
+# POH  [0, 1]   → gain=1/250, offset=0    → raw 1–250 = 0.004–1.0
+# LHI  metres   → gain=100,   offset=-100 → raw 1–254 = 0–25300 m
+# HHI  [0, 25+] → gain=0.1,   offset=-0.1 → raw 1–254 = 0.0–25.3
+# THI  [0, 27+] → same encoding as HHI
 _PRODUCT_ENCODING: dict[str, dict] = {
     "POH": {
         "gain": 1.0 / 250,
@@ -35,6 +37,18 @@ _PRODUCT_ENCODING: dict[str, dict] = {
     "LHI": {
         "gain": 100.0,
         "offset": -100.0,
+        "nodata": 255.0,
+        "undetect": 0.0,
+    },
+    "HHI": {
+        "gain": 0.1,
+        "offset": -0.1,
+        "nodata": 255.0,
+        "undetect": 0.0,
+    },
+    "THI": {
+        "gain": 0.1,
+        "offset": -0.1,
         "nodata": 255.0,
         "undetect": 0.0,
     },
