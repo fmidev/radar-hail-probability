@@ -73,25 +73,25 @@ class TestComputePoh:
 
 class TestComputeHhi:
     def test_formula_at_zero_crossing(self):
-        # dH = 0 km → HHI = 10 × 0.319 = 3.19
+        # dH = 0 km → raw = 10 × 0.319 = 3.19 → rounded to 3
         tops = _da([2000.0])
         zero = _da([2000.0])
         result = compute_hhi(tops, zero)
-        assert float(result[0]) == pytest.approx(3.19)
+        assert float(result[0]) == pytest.approx(3.0)
 
     def test_known_value(self):
-        # tops 3 km above zero: dH=3 → HHI = 10 × (0.319 + 0.133×3) = 7.18
+        # tops 3 km above zero: dH=3 → raw = 10 × 0.718 = 7.18 → rounded to 7
         tops = _da([5000.0])
         zero = _da([2000.0])
         result = compute_hhi(tops, zero)
-        assert float(result[0]) == pytest.approx(7.18)
+        assert float(result[0]) == pytest.approx(7.0)
 
     def test_no_upper_limit(self):
-        # Very deep convection (dH=10 km) → HHI = 10 × (0.319 + 1.33) = 16.49, not clamped
+        # Very deep convection (dH=10 km) → raw = 16.49 → rounded to 16, not clamped
         tops = _da([12000.0])
         zero = _da([2000.0])
         result = compute_hhi(tops, zero)
-        assert float(result[0]) == pytest.approx(10.0 * (0.319 + 0.133 * 10.0))
+        assert float(result[0]) == pytest.approx(16.0)
         assert float(result[0]) > 10.0
 
     def test_nan_tops_propagates(self):
@@ -100,13 +100,13 @@ class TestComputeHhi:
         result = compute_hhi(tops, zero)
         assert np.isnan(float(result[0]))
 
-    def test_hhi_is_ten_times_raw_poh(self):
-        # HHI should equal 10 × unclipped POH for values where POH < 1
+    def test_hhi_near_ten_times_raw_poh(self):
+        # HHI ≈ 10 × POH (within rounding) when POH < 1
         tops = _da([5000.0])
         zero = _da([2000.0])
         hhi = compute_hhi(tops, zero)
         poh = compute_poh(tops, zero)
-        assert float(hhi[0]) == pytest.approx(10.0 * float(poh[0]))
+        assert float(hhi[0]) == pytest.approx(10.0 * float(poh[0]), abs=0.5)
 
 
 class TestComputeLhi:

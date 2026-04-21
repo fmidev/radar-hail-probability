@@ -62,6 +62,9 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
   * 1200m < TOP <= 1700m, THI=HHI+1
   * 1700m < TOP <= 3500m, THI=HHI
   * TOP > 3500m, THI=HHI-1
+* LHI, HHI and THI are defined for integer values:
+  * HHI and THI >= 0
+  * LHI may have negative values
 * **TOPS products**: Radar echo top heights at given reflectivity thresholds (45/50 dBZ)
 * **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
 * **undetect**: encodes pixels that have no physical TOPS value

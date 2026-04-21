@@ -18,7 +18,7 @@ def compute_hhi(tops: xr.DataArray, zero_level: xr.DataArray) -> xr.DataArray:
         HHI values (10 × probability units, no upper limit), NaN where masked.
     """
     dh = (tops - zero_level) / 1000.0
-    hhi = 10.0 * (0.319 + 0.133 * dh)
+    hhi = np.round(10.0 * (0.319 + 0.133 * dh))
     return xr.where(np.isfinite(hhi), hhi, np.nan)
 
 
