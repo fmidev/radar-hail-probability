@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim AS builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -11,9 +11,16 @@ COPY pyproject.toml .
 COPY src/ src/
 COPY .git/ .git/
 
-# hatch-vcs requires a git checkout to derive the version; supply a fallback.
-ENV HATCH_VCS_PRETEND_VERSION=0.0.0
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
 
-ENTRYPOINT ["python", "/app/src/scripts/entrypoint.py"]
+RUN $VIRTUAL_ENV/bin/pip install --no-cache-dir --upgrade pip \
+    && $VIRTUAL_ENV/bin/pip install --no-cache-dir .
+
+
+FROM python:3.14-slim
+
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
