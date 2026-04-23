@@ -69,7 +69,7 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 * **Isotherms**: 0°C and −20°C altitude levels from NWP model data, used as inputs to POH formula
 * **undetect**: encodes pixels that have no physical TOPS value
 * **nodata**: encodes pixels that are outside radar composite coverage
-
+* Note also b-axis when transforming from and to IRIS native coordinate system
 
 ## Repository Structure
 
