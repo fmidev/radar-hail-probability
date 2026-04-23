@@ -23,7 +23,7 @@ No `setup.py` or `requirements.txt` — all metadata lives in `pyproject.toml`.
 ```sh
 # Activate virtualenv
 /home/tiira/.virtualenvs/radar-hail-probability/bin/activate
-
+```
 
 ## Airflow Integration
 
