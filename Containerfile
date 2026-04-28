@@ -7,9 +7,7 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY pyproject.toml .
-COPY src/ src/
-COPY .git/ .git/
+COPY . .
 
 ENV VIRTUAL_ENV=/opt/venv
 RUN python -m venv $VIRTUAL_ENV
@@ -22,5 +20,10 @@ FROM python:3.14-slim
 
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Runtime shared libraries only (no compilers, no git).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder $VIRTUAL_ENV $VIRTUAL_ENV
