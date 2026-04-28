@@ -9,7 +9,7 @@ import xarray as xr
 
 from hailathon.algorithms.lhi import compute_lhi, compute_thi
 from hailathon.algorithms.poh import compute_hhi, compute_poh
-from hailathon.io.iris import read_tops
+from hailathon.io.tops import read_tops
 from hailathon.io.nwp import interpolate_to_grid, read_isotherm_text
 from hailathon.io.geotiff import write_geotiff
 from hailathon.io.odim import write_odim
@@ -28,8 +28,8 @@ def process(
     """Run the full POH/LHI pipeline for a single time step.
 
     Args:
-        tops_45dbz_path: Path to the 45 dBZ IRIS TOPS composite.
-        tops_50dbz_path: Path to the 50 dBZ IRIS TOPS composite.
+        tops_45dbz_path: Path to the 45 dBZ ODIM HDF5 ETOP composite.
+        tops_50dbz_path: Path to the 50 dBZ ODIM HDF5 ETOP composite.
         zero_level_path: Path to the NWP 0°C isotherm text file.
         m20_level_path: Path to the NWP −20°C isotherm text file.
         output_dir: Directory where output files are written.
