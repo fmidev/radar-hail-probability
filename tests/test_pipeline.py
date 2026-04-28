@@ -90,8 +90,10 @@ class TestProcess:
             "output_dir": str(tmp_path / "output"),
         }
 
+    _EPSG3067_WKT = __import__("pyproj").CRS.from_epsg(3067).to_wkt()
+
     def _make_tops(self, value: float) -> xr.DataArray:
-        """Create a small TOPS-like DataArray."""
+        """Create a small TOPS-like DataArray with EPSG:3067 CRS."""
         y = np.arange(4, dtype=np.float64) * 1000
         x = np.arange(3, dtype=np.float64) * 1000
         data = np.full((4, 3), value, dtype=np.float32)
@@ -103,6 +105,7 @@ class TestProcess:
                 "y": ("y", y),
                 "noecho": (("y", "x"), noecho),
             },
+            attrs={"crs_wkt": self._EPSG3067_WKT},
         )
 
     def _make_nwp(self, value: float) -> xr.DataArray:
@@ -213,6 +216,36 @@ class TestProcess:
         np.testing.assert_allclose(
             lhi_arg.values, expected_lhi, atol=0.01,
         )
+
+    @patch("hailathon.pipeline.write_geotiff")
+    @patch("hailathon.pipeline.write_odim")
+    @patch("hailathon.pipeline.read_isotherm_text")
+    @patch("hailathon.pipeline.read_tops")
+    def test_crs_propagated_to_products(
+        self, mock_read_tops, mock_read_nwp, mock_odim, mock_tif,
+        synthetic_inputs,
+    ):
+        """crs_wkt from tops should reach every product DataArray passed to writers."""
+        from hailathon.pipeline import process
+        mock_read_tops.side_effect = [self._make_tops(5000.0), self._make_tops(6000.0)]
+        mock_read_nwp.side_effect = [self._make_nwp(2000.0), self._make_nwp(4000.0)]
+
+        process(
+            synthetic_inputs["tops_45"],
+            synthetic_inputs["tops_50"],
+            synthetic_inputs["zero"],
+            synthetic_inputs["m20"],
+            synthetic_inputs["output_dir"],
+            "20260409T0000Z",
+        )
+
+        for call in mock_odim.call_args_list + mock_tif.call_args_list:
+            product_da = call[0][1]
+            assert "crs_wkt" in product_da.attrs, (
+                f"crs_wkt missing from product passed to {call}"
+            )
+            assert "3067" in product_da.attrs["crs_wkt"] or \
+                   "TM35FIN" in product_da.attrs["crs_wkt"]
 
     @patch("hailathon.pipeline.write_geotiff")
     @patch("hailathon.pipeline.write_odim")

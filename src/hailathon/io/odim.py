@@ -14,7 +14,7 @@ import numpy as np
 import pyproj
 import xarray as xr
 
-from hailathon.projection.grid import CRS
+from hailathon.projection.grid import CRS as _FALLBACK_CRS
 
 # ODIM version string
 _ODIM_VERSION = "H5rad 2.4"
@@ -83,9 +83,12 @@ def write_odim(
     x = data.coords["x"].values
     y = data.coords["y"].values
 
+    crs_wkt = data.attrs.get("crs_wkt")
+    crs = pyproj.CRS.from_wkt(crs_wkt) if crs_wkt else _FALLBACK_CRS
+
     with h5py.File(path, "w") as f:
         _write_root_what(f, date_str, time_str)
-        _write_where(f, x, y)
+        _write_where(f, x, y, crs)
         _write_dataset(f, raw, product, date_str, time_str, encoding)
 
 
@@ -140,12 +143,11 @@ def _write_root_what(f: h5py.File, date_str: str, time_str: str) -> None:
     what.attrs["source"] = _SOURCE
 
 
-def _write_where(f: h5py.File, x: np.ndarray, y: np.ndarray) -> None:
+def _write_where(f: h5py.File, x: np.ndarray, y: np.ndarray, crs: pyproj.CRS) -> None:
     """Write the ``/where`` group with projection and grid parameters."""
     where = f.create_group("where")
 
-    projdef = CRS.to_proj4()
-    where.attrs["projdef"] = projdef
+    where.attrs["projdef"] = crs.to_proj4()
     where.attrs["xsize"] = np.int64(len(x))
     where.attrs["ysize"] = np.int64(len(y))
 
@@ -157,7 +159,7 @@ def _write_where(f: h5py.File, x: np.ndarray, y: np.ndarray) -> None:
 
     # Corner coordinates in WGS-84
     transformer = pyproj.Transformer.from_crs(
-        CRS, pyproj.CRS.from_epsg(4326), always_xy=True
+        crs, pyproj.CRS.from_epsg(4326), always_xy=True
     )
     # Pixel-edge corners (half-pixel outward from centres)
     x_min = float(x[0] - dx / 2)

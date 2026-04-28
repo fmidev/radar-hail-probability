@@ -1,11 +1,12 @@
 """Write hail probability fields to Cloud-Optimized GeoTIFF."""
 
 import numpy as np
+import pyproj
 import rasterio
 from rasterio.transform import from_bounds
 import xarray as xr
 
-from hailathon.projection.grid import CRS
+from hailathon.projection.grid import CRS as _FALLBACK_CRS
 
 # uint8 encoding per product, matching the ODIM conventions.
 # GDAL convention: physical = raw * scale + offset
@@ -64,6 +65,8 @@ def write_geotiff(path: str, data: xr.DataArray, product: str) -> None:
     # GeoTIFF convention: row 0 = north (top).  Our array has row 0 = south.
     raw = raw[::-1]
 
+    crs_wkt = data.attrs.get("crs_wkt", _FALLBACK_CRS.to_wkt())
+
     with rasterio.open(
         path,
         "w",
@@ -72,7 +75,7 @@ def write_geotiff(path: str, data: xr.DataArray, product: str) -> None:
         width=width,
         count=1,
         dtype="uint8",
-        crs=CRS.to_wkt(),
+        crs=crs_wkt,
         transform=transform,
         nodata=nodata,
     ) as dst:

@@ -159,6 +159,27 @@ class TestWriteOdim:
             recovered = recovered[::-1]
             np.testing.assert_allclose(recovered, values, atol=gain)
 
+    def test_crs_from_attrs_overrides_fallback(self, tmp_path):
+        """crs_wkt in data.attrs should be written to projdef, not the FIN1000 fallback."""
+        import h5py
+        import pyproj
+        epsg3067_wkt = pyproj.CRS.from_epsg(3067).to_wkt()
+        y = np.array([6390125.0, 6390375.0])
+        x = np.array([-207875.0, -207625.0])
+        da = xr.DataArray(
+            np.ones((2, 2), dtype=np.float32),
+            dims=["y", "x"],
+            coords={"x": ("x", x), "y": ("y", y)},
+            attrs={"crs_wkt": epsg3067_wkt},
+        )
+
+        out = str(tmp_path / "test_epsg3067.h5")
+        write_odim(out, da, "LHI", "20260409T0100Z")
+
+        with h5py.File(out, "r") as f:
+            projdef = f["where"].attrs["projdef"]
+        assert "utm" in projdef.lower() or "3067" in projdef
+
     def test_lhi_product(self, tmp_path):
         """LHI metre values round-trip correctly."""
         import h5py
@@ -201,6 +222,27 @@ class TestWriteGeotiff:
         with rasterio.open(out) as src:
             assert src.crs is not None
             assert "stere" in src.crs.to_proj4()
+
+    def test_crs_from_attrs_overrides_fallback(self, tmp_path):
+        """crs_wkt in data.attrs should be embedded, not the FIN1000 fallback."""
+        import pyproj
+        import rasterio
+        epsg3067_wkt = pyproj.CRS.from_epsg(3067).to_wkt()
+        y = np.array([6390125.0, 6390375.0])
+        x = np.array([-207875.0, -207625.0])
+        da = xr.DataArray(
+            np.ones((2, 2), dtype=np.float32),
+            dims=["y", "x"],
+            coords={"x": ("x", x), "y": ("y", y)},
+            attrs={"crs_wkt": epsg3067_wkt},
+        )
+
+        out = str(tmp_path / "test_epsg3067.tif")
+        write_geotiff(out, da, "POH")
+
+        with rasterio.open(out) as src:
+            assert src.crs is not None
+            assert src.crs.to_epsg() == 3067
 
     def test_nodata_is_255(self, tmp_path, sample_data):
         import rasterio

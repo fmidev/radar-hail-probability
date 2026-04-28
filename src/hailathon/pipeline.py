@@ -77,6 +77,11 @@ def process(
     hhi.coords["noecho"] = tops_45.coords["noecho"]
     lhi.coords["noecho"] = tops_50.coords["noecho"]
     thi.coords["noecho"] = tops_45.coords["noecho"]
+
+    # Carry the CRS so writers embed the correct projection.
+    for da, src in [(poh, tops_45), (hhi, tops_45), (lhi, tops_50), (thi, tops_45)]:
+        if "crs_wkt" in src.attrs:
+            da.attrs["crs_wkt"] = src.attrs["crs_wkt"]
     log.info("Products computed: POH, HHI, LHI, THI")
 
     # -- Write outputs -------------------------------------------------
