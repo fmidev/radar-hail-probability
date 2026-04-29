@@ -24,12 +24,13 @@ _PRODUCT_UNITS: dict[str, str] = {
     "thi": "index",
 }
 
-_DEFAULT_NAME_FORMAT = "{type}_{datestr}.{ext}"
+_DEFAULT_NAME_FORMAT = "{type}_{datetime_format}.{ext}"
+_DEFAULT_DATETIME_FORMAT = "%Y%m%d%H%M"
 
 
 def _output_filename(fmt: str, ts_str: str, product: str, ext: str) -> str:
     return fmt.format(
-        datestr=ts_str,
+        datetime_format=ts_str,
         type=product,
         units=_PRODUCT_UNITS.get(product, ""),
         ext=ext,
@@ -44,6 +45,7 @@ def process(
     output_dir: str,
     timestamp: str,
     output_name_format: str | None = None,
+    datetime_format: str = _DEFAULT_DATETIME_FORMAT,
 ) -> dict[str, str]:
     """Run the full POH/LHI pipeline for a single time step.
 
@@ -55,8 +57,10 @@ def process(
         output_dir: Directory where output files are written.
         timestamp: Nominal product time, ISO-8601 (e.g. "20240601T1200Z").
         output_name_format: Template for output filenames.  Supports
-            ``{datestr}``, ``{type}``, ``{units}``, and ``{ext}`` placeholders.
-            Defaults to ``"{type}_{datestr}.{ext}"``.
+            ``{datetime_format}``, ``{type}``, ``{units}``, and ``{ext}``
+            placeholders.  Defaults to ``"{type}_{datetime_format}.{ext}"``.
+        datetime_format: strftime format string used to render the timestamp
+            inside the filename.  Defaults to ``"%Y%m%dT%H%MZ"``.
 
     Returns:
         Dict mapping product name to output file path:
@@ -109,7 +113,7 @@ def process(
 
     # -- Write outputs -------------------------------------------------
     os.makedirs(output_dir, exist_ok=True)
-    ts_str = ts.strftime("%Y%m%dT%H%MZ")
+    ts_str = ts.strftime(datetime_format)
     fmt = output_name_format if output_name_format is not None else _DEFAULT_NAME_FORMAT
 
     paths: dict[str, str] = {}
