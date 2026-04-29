@@ -17,6 +17,25 @@ from hailathon.io.odim import write_odim
 log = logging.getLogger(__name__)
 
 
+_PRODUCT_UNITS: dict[str, str] = {
+    "poh": "prob",
+    "hhi": "index",
+    "lhi": "index",
+    "thi": "index",
+}
+
+_DEFAULT_NAME_FORMAT = "{type}_{datestr}.{ext}"
+
+
+def _output_filename(fmt: str, ts_str: str, product: str, ext: str) -> str:
+    return fmt.format(
+        datestr=ts_str,
+        type=product,
+        units=_PRODUCT_UNITS.get(product, ""),
+        ext=ext,
+    )
+
+
 def process(
     tops_45dbz_path: str,
     tops_50dbz_path: str,
@@ -24,6 +43,7 @@ def process(
     m20_level_path: str,
     output_dir: str,
     timestamp: str,
+    output_name_format: str | None = None,
 ) -> dict[str, str]:
     """Run the full POH/LHI pipeline for a single time step.
 
@@ -34,6 +54,9 @@ def process(
         m20_level_path: Path to the NWP −20°C isotherm text file.
         output_dir: Directory where output files are written.
         timestamp: Nominal product time, ISO-8601 (e.g. "20240601T1200Z").
+        output_name_format: Template for output filenames.  Supports
+            ``{datestr}``, ``{type}``, ``{units}``, and ``{ext}`` placeholders.
+            Defaults to ``"{type}_{datestr}.{ext}"``.
 
     Returns:
         Dict mapping product name to output file path:
@@ -87,16 +110,14 @@ def process(
     # -- Write outputs -------------------------------------------------
     os.makedirs(output_dir, exist_ok=True)
     ts_str = ts.strftime("%Y%m%dT%H%MZ")
+    fmt = output_name_format if output_name_format is not None else _DEFAULT_NAME_FORMAT
 
     paths: dict[str, str] = {}
-    paths["poh_odim"] = os.path.join(output_dir, f"poh_{ts_str}.h5")
-    paths["hhi_odim"] = os.path.join(output_dir, f"hhi_{ts_str}.h5")
-    paths["lhi_odim"] = os.path.join(output_dir, f"lhi_{ts_str}.h5")
-    paths["thi_odim"] = os.path.join(output_dir, f"thi_{ts_str}.h5")
-    paths["poh_tif"] = os.path.join(output_dir, f"poh_{ts_str}.tif")
-    paths["hhi_tif"] = os.path.join(output_dir, f"hhi_{ts_str}.tif")
-    paths["lhi_tif"] = os.path.join(output_dir, f"lhi_{ts_str}.tif")
-    paths["thi_tif"] = os.path.join(output_dir, f"thi_{ts_str}.tif")
+    for product in ("poh", "hhi", "lhi", "thi"):
+        for ext, suffix in (("h5", "odim"), ("tif", "tif")):
+            paths[f"{product}_{suffix}"] = os.path.join(
+                output_dir, _output_filename(fmt, ts_str, product, ext)
+            )
 
     write_odim(paths["poh_odim"], poh, "POH", timestamp)
     write_odim(paths["hhi_odim"], hhi, "HHI", timestamp)
