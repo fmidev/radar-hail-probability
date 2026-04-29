@@ -14,7 +14,10 @@ from hailathon.io.nwp import interpolate_to_grid, read_isotherm_text
 from hailathon.io.geotiff import write_geotiff
 from hailathon.io.odim import write_odim
 
+from hailathon.logs import streamlogger_setup
+
 log = logging.getLogger(__name__)
+streamlogger_setup(log)
 
 
 _PRODUCT_UNITS: dict[str, str] = {
@@ -132,7 +135,8 @@ def process(
     write_geotiff(paths["lhi_tif"], lhi, "LHI")
     write_geotiff(paths["thi_tif"], thi, "THI")
 
-    log.info("Outputs written to %s", output_dir)
+    for path in paths.values():
+        log.info("Wrote %s", path)
     return paths
 
 
