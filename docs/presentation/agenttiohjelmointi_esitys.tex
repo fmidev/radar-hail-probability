@@ -6,6 +6,7 @@
 \usepackage{fontawesome5}
 \usepackage{booktabs}
 \usepackage{textcomp}
+\usepackage{graphicx}
 \usepackage{tcolorbox}
 \tcbuselibrary{skins}
 \newcommand{\infobubble}[1]{%
@@ -21,9 +22,9 @@
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{footline}[frame number]
 
-\title{Agenttiavusteinen ohjelmointi käytännössä}
+\title{Agenttiavusteinen mob-ohjelmointi}
 \subtitle{Tutkatuotannon uudistushanke}
-\author{PAK / Tutkatuotanto}
+\author{PAK}
 \institute{Ilmatieteen laitos}
 \date{Mapa 4.5.2026}
 
@@ -41,16 +42,16 @@
       \textbf{Lähtötilanne}
       \begin{itemize}
         \item Tuotannossa C-ohjelmat + tcsh-skriptit
-        \item Tuottaa \textbf{POH}- ja \textbf{LHI}-kenttiä IRIS-tutkakomposiiteista
+        \item Tuottaa raeindeksikenttiä IRIS-tutkakomposiiteista
         \item 20-vuotias täysin palvellut koodi
       \end{itemize}
       \vspace{0.5em}
       \textbf{Tavoite}
       \begin{itemize}
         \item Modernisoi Python-paketiksi
-        \item Sama toiminnallisuus, luettava koodi
+        \item Vastaava toiminnallisuus, luettava koodi
         \item Airflow-yhteensopiva Docker-kontti
-        \item Ulostulo: ODIM HDF5 ja Cloud-Optimized GeoTIFF
+        \item Tulosteet ODIM HDF5- ja COG-muodossa
       \end{itemize}
     \end{column}
     \begin{column}{0.42\textwidth}
@@ -59,16 +60,18 @@
       % Korvaa tämä kaavakuvalla jos haluat
       \begin{block}{Datavirta}
         \small
-        IRIS TOPS (45/50 dBZ)\\
-        + NWP-isotermit (0\textdegree C, -20\textdegree C)\\
+        ODIM TOPS (45/50 dBZ)\\
+        + Säämallien isotermit (0\textdegree C, -20\textdegree C)\\
         $\downarrow$ \\
-        POH $\in [0,1]$ \quad LHI [m]
+        POH, HHI, LHI, THI
       \end{block}
       \vspace{0.3em}
       \infobubble{%
         \textbf{TOPS} kaikuhuipun korkeus [m]\\
         \textbf{POH} Probability of Hail\\
-        \textbf{LHI} Large Hail Index
+        \textbf{HHI} Holleman Hail Index\\
+        \textbf{LHI} Large Hail Index\\
+        \textbf{THI} Tuovinen Hail Index
       }
     \end{column}
   \end{columns}
@@ -80,9 +83,9 @@
     \begin{column}{0.48\textwidth}
       \textbf{Istuntorakenne}
       \begin{itemize}
-        \item 2 päivää, reilu 6 tuntia yhteensä
-        \item 6 hengen ryhmä
-        \item \textbf{6 minuutin kierrot} — yksi "kuljettaja" kerrallaan
+        \item 6 istuntoa, 13 tuntia yhteensä
+        \item 3-6 hengen ryhmä
+        \item \textbf{6 minuutin kierrot} — yksi näppäilijä kerrallaan
         \item Koko ryhmä seuraa ja kommentoi reaaliajassa
       \end{itemize}
     \end{column}
@@ -121,7 +124,7 @@
       \end{exampleblock}
     \end{column}
     \begin{column}{0.45\textwidth}
-      \begin{block}{Osa kuuden tunnin tuotoksia}
+      \begin{block}{Osa kolmentoista tunnin tuotoksia}
         \small
         \texttt{AGENTS.md} on osa repositoriota ja
         kehittyi projektin mukana — ei kertaluonteinen valmistelu
@@ -132,29 +135,25 @@
 \end{frame}
 
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{frame}{Mitä 6 tunnissa syntyi}
+\begin{frame}{Mitä 13 tunnissa syntyi}
   \begin{columns}
     \begin{column}{0.52\textwidth}
-      \textbf{Toteutetut komponentit}
-      \begin{enumerate}
-        \item \texttt{projection/grid.py} — FIN1000-koordinaatisto
-        \item \texttt{io/iris.py} — IRIS TOPS -lukija (wradlib)
-        \item \texttt{io/nwp.py} — NWP-tekstilukija + interpolointi
-        \item \texttt{algorithms/poh.py} — POH-algoritmi
-        \item \texttt{algorithms/lhi.py} — LHI- ja THI-algoritmit
-        \item \texttt{pipeline.py} — Kokonaisputkilinja
-        \item \texttt{output/odim.py} — ODIM HDF5 -kirjoitus
-        \item \texttt{output/geotiff.py} — Cloud-Optimized GeoTIFF
-        \item Debuggausskriptit
-      \end{enumerate}
+      \textbf{Toteutus pähkinänkuoressa}
+      \begin{itemize}
+        \item Lukee TOPS-komposiitteja IRIS- ja ODIM-muodossa sekä NWP-isotermejä
+        \item Laskee neljä raeindeksiä: \textbf{POH, HHI, LHI, THI}
+        \item Kirjoittaa tulosteet ODIM HDF5- ja COG-muodossa
+        \item Docker-kontitus
+        \item Airflow DAG
+      \end{itemize}
     \end{column}
     \begin{column}{0.45\textwidth}
       \begin{block}{Testikattavuus}
         \centering
-        \Large \textbf{158 testiä}\\[0.3em]
+        \Large \textbf{194 testiä}\\[0.3em]
         \normalsize
         yksikkö- ja integraatiotestit\\
-        oikeilla IRIS-tiedostoilla
+        oikeilla IRIS- ja ODIM-tiedostoilla
       \end{block}
       \vspace{0.5em}
       \begin{block}{Koodirivejä}
@@ -164,8 +163,8 @@
           \toprule
           Komponentti & Rivejä \\
           \midrule
-          Lähdekoodi   & $\sim$600 \\
-          Testit        & $\sim$700 \\
+          Lähdekoodi   & $\sim$1100 \\
+          Testit        & $\sim$1400 \\
           \bottomrule
         \end{tabular}
       \end{block}
@@ -217,7 +216,7 @@
           Agentti kirjoittaa ja ajaa testit, sekä korjaa enimmät virheet itsenäisesti
     \item \textbf{Haasta ja kysy} \\
           Claude ehdottaa, ihminen päättää — aktiivinen ohjaus on välttämätöntä
-    \item \textbf{Substanssiosaaminen ei häviä mihinkään} \\
+    \item \textbf{Substanssiosaaminen olennaista} \\
           Säätutka-asiantuntemus oli kriittistä joka askeleella
   \end{enumerate}
 \end{frame}
@@ -227,15 +226,17 @@
   \begin{columns}
     \begin{column}{0.55\textwidth}
       \begin{block}{Tulos}
-        Toimiva Python-toteutus syntyi vanhan tuotantokoodin pohjalta \textbf{kahdessa päivässä} kuuden hengen ryhmässä.\\[0.5em]
-        Ilman agenttiapua sama työ olisi kestänyt \emph{arviolta viikkoja}.
+        \begin{itemize}
+          \item Python-toteutus vanhan tuotantokoodin pohjalta \textbf{kuudessa istunnossa} (13~h) 3-6 hengen ryhmissä
+          \item Ilman agenttiapua sama työ olisi kestänyt \emph{arviolta viikkoja}.
+        \end{itemize}
       \end{block}
       \vspace{0.7em}
       \textbf{Seuraavat askeleet}
       \begin{itemize}
-        \item Containerfile ja Airflow-integraatio
-        \item Validointi oikeaa tuotantodataa vastaan
-        \item Projekti jatkuu mahdollisesti samalla tyylillä
+        \item Mallidata ASCII-tiedostojen sijaan Smartmet-serveriltä
+        \item WMS-tasot ja validointi
+        \item \textbf{Seuraavan tuotteen uudistus samalla tyylillä}
       \end{itemize}
     \end{column}
     \begin{column}{0.42\textwidth}
@@ -246,15 +247,20 @@
         \normalsize
         \texttt{radar-hail-probability}\\
         \small (hailathon)\\[1em]
-        \large 6h+ \faArrowRight\ kokonainen toteutus\\
-        \large + 158 testiä
+        \large 13h \faArrowRight\ kokonainen toteutus\\
+        \large + 194 testiä\\
+        \large + Airflow DAG
         \vspace{0.5em}
       \end{block}
     \end{column}
   \end{columns}
   \vspace{1em}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{}
   \centering
-  \large\textit{Kysymyksiä?}
+  \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{questions}
 \end{frame}
 
 \end{document}
