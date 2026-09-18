@@ -16,15 +16,6 @@ The legacy implementation (in `legacy/`) consists of:
 
 Uses **Hatch** as the project manager and build backend (`hatchling` + `hatch-vcs` for version from git tags).
 
-No `setup.py` or `requirements.txt` — all metadata lives in `pyproject.toml`.
-
-## Commands
-
-```sh
-# Activate virtualenv
-/home/tiira/.virtualenvs/radar-hail-probability/bin/activate
-```
-
 ## Airflow Integration
 
 This package is deployed as a containerized service in FMI's Airflow v2.11 radar production system. The integration pattern:
@@ -38,7 +29,7 @@ This package is deployed as a containerized service in FMI's Airflow v2.11 radar
 - **Python ≥ 3.14** — use modern syntax freely (e.g. `match`, `type` aliases, `X | Y` unions)
 
 ### Style
-- Follow Black formatting
+- Lint using Ruff
 - Naming, comments, etc. in English
 - Mention corresponding legacy names for key variables in comments/docstrings if helpful
 - It's better to briefly quote legacy code than to refer to line numbers
@@ -85,3 +76,17 @@ tests/           # pytest tests
 - The Python rewrite is the active development target
 - The legacy code in `legacy/` serves as reference for understanding the algorithms
 - The legacy C code depends on external headers (`sigtypes.h`, `product.h`, etc.) from the IRIS/FMI software environment — these are not in the repo and the legacy code is not expected to compile standalone
+
+## TODO
+
+- **Switch NWP source to SmartMet Server** — query the isotherm heights directly from
+  SmartMet Server instead of reading the pre-generated text files
+  (`meps_zerolevel_stere_radar.txt`, `meps_M20_level_stere_radar.txt`). When doing so:
+  - **Verify the vertical datum.** The current text-file reader (`io/nwp.py`) assumes
+    heights are metres AGL, while the TOPS composites are heights above sea level. If
+    that assumption holds, `dH` carries a systematic terrain-height bias (up to a few
+    hundred metres in eastern/northern Finland) and the isotherm heights need terrain
+    elevation added before differencing. Confirm the datum of whatever SmartMet returns
+    and correct both the old and new paths accordingly.
+  - Mask the degenerate case where the entire column is colder than the threshold — the
+    isotherm height may then be reported as `0` rather than missing.
